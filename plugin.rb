@@ -4,6 +4,8 @@
 # authors: Robin Ward
 # url: https://github.com/discourse/discourse-oauth2-basic
 
+require 'crack'
+
 require_dependency 'auth/oauth2_authenticator.rb'
 
 enabled_site_setting :oauth2_enabled
@@ -12,7 +14,7 @@ class ::OmniAuth::Strategies::Oauth2Basic < ::OmniAuth::Strategies::OAuth2
   option :name, "oauth2_basic"
   info do
     {
-      id: access_token['id']
+      id: access_token['orcid']
     }
   end
 
@@ -89,18 +91,22 @@ class OAuth2BasicAuthenticator < ::Auth::OAuth2Authenticator
           .post_form(URI(user_json_url), { 'Authorization' => bearer_token })
           .body
       else
-        open(user_json_url, 'Authorization' => bearer_token).read
+        open(user_json_url, 
+          'Accept' => 'application/json', 
+          'Authorization type' => 'Bearer', 
+          'Authorization' => token
+        ).read
       end
-
+    
     user_json = JSON.parse(user_json_response)
-
     log("user_json: #{user_json}")
 
     result = {}
     if user_json.present?
       json_walk(result, user_json, :user_id)
       json_walk(result, user_json, :username)
-      json_walk(result, user_json, :name)
+      json_walk(result, user_json, :first_name)
+      json_walk(result, user_json, :last_name)
       json_walk(result, user_json, :email)
       json_walk(result, user_json, :avatar)
     end
@@ -109,15 +115,15 @@ class OAuth2BasicAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_authenticate(auth)
-    log("after_authenticate response: \n\ncreds: #{auth['credentials'].to_hash}\ninfo: #{auth['info'].to_hash}\nextra: #{auth['extra'].to_hash}")
+    log("after_authenticate response: \n\nauth: #{auth.to_hash}")
 
     result = Auth::Result.new
     token = auth['credentials']['token']
     user_details = fetch_user_details(token, auth['info'][:id])
 
-    result.name = user_details[:name]
+    result.name = "#{user_details[:first_name]} #{user_details[:last_name]}"
     result.username = user_details[:username]
-    result.email = user_details[:email]
+    result.email = "njarboe@ucsd.edu" #user_details[:email]
     result.email_valid = result.email.present? && SiteSetting.oauth2_email_verified?
     avatar_url = user_details[:avatar]
 

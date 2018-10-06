@@ -21,7 +21,8 @@ login:
       - POST
   oauth2_json_user_id_path: ''
   oauth2_json_username_path: ''
-  oauth2_json_name_path: ''
+  oauth2_json_first_name_path: ''
+  oauth2_json_last_name_path: ''
   oauth2_json_email_path: ''
   oauth2_json_avatar_path: ''
   oauth2_email_verified: false
